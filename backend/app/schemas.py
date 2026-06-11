@@ -25,6 +25,7 @@ class TokenResponse(BaseModel):
 class UploadResponse(BaseModel):
     document_id: str
     file_name: str
+    chunk_count: int
     message: str
 
 class ChatRequest(BaseModel):

@@ -6,6 +6,7 @@ from app.database import get_db
 from app.models import User, Document
 from app.utils import get_current_user
 from app.schemas import UploadResponse
+from app.document_processor import process_document
  
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -31,8 +32,12 @@ async def upload_document(
     await db.commit()
     await db.refresh(document)
 
+    contents = await file.read()
+    chunk_count = await process_document(str(document.id), contents, file.filename)
+
     return UploadResponse(
         document_id=str(document.id),
         file_name=document.file_name,
+        chunk_count=chunk_count,
         message="Document uploaded successfully."
     )

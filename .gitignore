@@ -33,6 +33,7 @@ dist/
 *.sqlite
 *.sqlite3
 *.log
+chroma_db/
 
 # Editor / OS files
 .vscode/
