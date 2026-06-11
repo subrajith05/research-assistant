@@ -1,4 +1,6 @@
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, field_validator, ConfigDict
+import uuid
+from datetime import datetime
 
 class SignupRequest(BaseModel):
     name: str
@@ -19,3 +21,24 @@ class LoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+class UploadResponse(BaseModel):
+    document_id: str
+    file_name: str
+    message: str
+
+class ChatRequest(BaseModel):
+    session_id: uuid.UUID
+    query: str
+
+class ChatResponse(BaseModel):
+    session_id: str
+    answer: str
+
+class ChatHistoryItem(BaseModel):
+    id: uuid.UUID
+    question: str
+    answer: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
