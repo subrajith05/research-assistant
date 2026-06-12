@@ -10,6 +10,7 @@ from app.document_processor import process_document
  
 router = APIRouter(prefix="/documents", tags=["documents"])
 
+#Endpoint to upload the document and add it to database
 @router.post("/upload", response_model=UploadResponse, status_code=status.HTTP_201_CREATED)
 async def upload_document(
     file: UploadFile = File(...),

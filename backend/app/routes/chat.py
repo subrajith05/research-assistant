@@ -7,9 +7,11 @@ from app.database import get_db
 from app.models import User, ChatSession, ChatLog
 from app.utils import get_current_user
 from app.schemas import ChatRequest, ChatResponse, ChatHistoryItem
+from app.pipeline import run_pipeline
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
+#Endpoint for sending the user query to the LLM
 @router.post("/", response_model=ChatResponse, status_code=status.HTTP_200_OK)
 async def chat(
     request: ChatRequest,
@@ -28,7 +30,11 @@ async def chat(
         await db.commit()
         await db.refresh(session)
 
-    answer = "Agent pipeline to be added later"
+    answer = await run_pipeline(
+        query=request.query,
+        user_id=str(current_user.id),
+        db=db
+    )
 
     log = ChatLog(
         id = uuid.uuid4(),
@@ -43,6 +49,7 @@ async def chat(
 
     return ChatResponse(session_id=str(session.id), answer=answer)
 
+#Endpoint to fetch the chat history
 @router.get("/history/{session_id}", response_model=list[ChatHistoryItem])
 async def get_history(
     session_id: uuid.UUID,

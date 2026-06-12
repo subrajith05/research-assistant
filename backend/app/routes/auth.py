@@ -11,6 +11,7 @@ from app.schemas import SignupRequest, LoginRequest, TokenResponse
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+#Endpoint for signup
 @router.post("/signup", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def signup(request: SignupRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == request.email))
@@ -35,6 +36,7 @@ async def signup(request: SignupRequest, db: AsyncSession = Depends(get_db)):
     token = create_access_token(data={"sub": str(user.id)})
     return TokenResponse(access_token=token)
 
+#Endpoint for logging in to the application
 @router.post("/login", response_model=TokenResponse)
 async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == request.email))

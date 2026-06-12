@@ -1,4 +1,3 @@
-import uuid
 import os
 import tempfile
 
@@ -9,11 +8,13 @@ from langchain_chroma import Chroma
 
 from app.config import settings
 
+#Embedding model
 embeddings = GoogleGenerativeAIEmbeddings(
     model="gemini-embedding-001",
     api_key=settings.GEMINI_API_KEY
 )
 
+#Fetching the vector_store
 def get_vector_store(document_id: str) -> Chroma:
     return Chroma(
         collection_name=document_id,
@@ -21,6 +22,7 @@ def get_vector_store(document_id: str) -> Chroma:
         persist_directory=settings.CHROMA_PERSIST_DIR,
     )
 
+#Function to fetch text from the document, convert to embedding and store it in Chroma
 async def process_document(document_id: str, file_bytes: bytes, file_name: str) -> int:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
         tmp.write(file_bytes)
