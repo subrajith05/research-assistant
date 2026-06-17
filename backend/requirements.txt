@@ -18,3 +18,4 @@ google-genai==2.8.0
 langchain-experimental==0.4.2
 langchain-chroma==1.1.0
 laggraph==1.2.4
+redis==8.0.0

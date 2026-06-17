@@ -8,6 +8,7 @@ from app.models import User, ChatSession, ChatLog
 from app.utils import get_current_user
 from app.schemas import ChatRequest, ChatResponse, ChatHistoryItem
 from app.pipeline import run_pipeline
+from app.memory import add_exchange
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -33,6 +34,7 @@ async def chat(
     answer = await run_pipeline(
         query=request.query,
         user_id=str(current_user.id),
+        session_id=str(session.id),
         db=db
     )
 
@@ -46,6 +48,8 @@ async def chat(
     db.add(log)
     await db.commit()
     await db.refresh(log)
+
+    await add_exchange(str(session.id), request.query, answer)
 
     return ChatResponse(session_id=str(session.id), answer=answer)
 
