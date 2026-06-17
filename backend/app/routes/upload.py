@@ -1,4 +1,5 @@
 import uuid
+import logging
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
  
@@ -6,9 +7,12 @@ from app.database import get_db
 from app.models import User, Document
 from app.utils import get_current_user
 from app.schemas import UploadResponse
-from app.document_processor import process_document
- 
+from app.document_processor import process_document, DocumentProcessingError
+
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/documents", tags=["documents"])
+
+MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024  #20MB
 
 #Endpoint to upload the document and add it to database
 @router.post("/upload", response_model=UploadResponse, status_code=status.HTTP_201_CREATED)
@@ -17,10 +21,24 @@ async def upload_document(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if not file.filename.endswith(".pdf"):
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only pdf files are accepteed"
+            detail="Only PDF files are accepteed"
+        )
+    
+    contents = await file.read()
+
+    if not contents:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Uploaded file is empty"
+        )
+    
+    if len(contents) > MAX_FILE_SIZE_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File exceeds maximum file size of {MAX_FILE_SIZE_BYTES // (1024 * 1024)}MB."
         )
     
     document = Document(
@@ -28,13 +46,35 @@ async def upload_document(
         user_id = current_user.id,
         file_name = file.filename
     )
-
-    db.add(document)
-    await db.commit()
-    await db.refresh(document)
-
-    contents = await file.read()
-    chunk_count = await process_document(str(document.id), contents, file.filename)
+    try:
+        db.add(document)
+        await db.commit()
+        await db.refresh(document)
+    except Exception as e:
+        logger.error(f"Failed to save document metadata : {e}")
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to save document. Please try again."
+        )
+    
+    try:
+        chunk_count = await process_document(str(document.id), contents, file.filename)
+    except DocumentProcessingError as e:
+        await db.delete(document)
+        await db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error processing document '{file.filename}' : {e}")
+        await db.delete(document)
+        await db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while processing your document. Please try again.",
+        )
 
     return UploadResponse(
         document_id=str(document.id),
