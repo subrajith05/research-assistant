@@ -43,3 +43,14 @@ class ChatHistoryItem(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class DocumentItem(BaseModel):
+    id: str
+    file_name: str
+    uploaded_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DeleteResponse(BaseModel):
+    message: str

@@ -2,12 +2,13 @@ import uuid
 import logging
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
  
 from app.database import get_db
 from app.models import User, Document
 from app.utils import get_current_user
-from app.schemas import UploadResponse
-from app.document_processor import process_document, DocumentProcessingError
+from app.schemas import UploadResponse, DocumentItem, DeleteResponse
+from app.document_processor import process_document, DocumentProcessingError, get_vector_store
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -82,3 +83,53 @@ async def upload_document(
         chunk_count=chunk_count,
         message="Document uploaded successfully."
     )
+
+#Endpoint to list all documents uploaded by the current user
+@router.get("/", response_model=list[DocumentItem])
+async def get_documents(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    result = await db.execute(select(Document).where(Document.user_id == current_user.id).order_by(Document.uploaded_at.desc()))
+    documents = result.scalars().all()
+    return documents
+
+#Endpoint to delete a document from both postgres and chromaDB
+@router.delete("/{document_id}", response_model=DeleteResponse)
+async def delete_document(
+    document_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    result = await db.execute(
+        select(Document)
+        .where(Document.user_id == current_user.id, Document.id == document_id)
+    )
+    document = result.scalar_one_or_none()
+
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found."
+        )
+    
+    try:
+        vector_store = get_vector_store(str(document_id))
+        vector_store.delete_collection()
+
+    except Exception as e:
+        logger.warning(f"Failed to delete ChromaDB collection for document {document_id}: {e}")
+    
+
+    try:
+        await db.delete(document)
+        await db.commit()
+    except Exception as e:
+        logger.error(f"Failed to delete document metadata for {document_id}: {e}")
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete document. Please try again.",
+        )
+ 
+    return DeleteResponse(message="Document deleted successfully.")

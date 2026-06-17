@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routes import auth, upload, chat
+from app.routes import auth, chat, documents
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -21,7 +21,7 @@ app.add_middleware(
 
 #Including the routes
 app.include_router(auth.router)
-app.include_router(upload.router)
+app.include_router(documents.router)
 app.include_router(chat.router)
 
 
