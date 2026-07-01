@@ -45,7 +45,7 @@ class ChatHistoryItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class DocumentItem(BaseModel):
-    id: str
+    id: uuid.UUID
     file_name: str
     uploaded_at: datetime
 
