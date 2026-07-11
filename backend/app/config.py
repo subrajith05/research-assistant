@@ -17,7 +17,6 @@ class Settings(BaseSettings):
     CHROMA_API_KEY: str = ""
     CHROMA_TENANT: str = ""
     CHROMA_DATABASE: str = ""
-    ALLOWED_ORIGINS: str = "http://localhost:5173"
 
     class Config:
         env_file = ".env"
