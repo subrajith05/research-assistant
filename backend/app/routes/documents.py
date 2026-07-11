@@ -8,7 +8,7 @@ from app.database import get_db
 from app.models import User, Document
 from app.utils import get_current_user
 from app.schemas import UploadResponse, DocumentItem, DeleteResponse
-from app.document_processor import process_document, DocumentProcessingError, get_vector_store
+from app.document_processor import process_document, DocumentProcessingError, delete_document_collection
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -114,9 +114,8 @@ async def delete_document(
         )
     
     try:
-        vector_store = get_vector_store(str(document_id))
-        vector_store.delete_collection()
-
+        delete_document_collection(str(document.id))
+    
     except Exception as e:
         logger.warning(f"Failed to delete ChromaDB collection for document {document_id}: {e}")
     
