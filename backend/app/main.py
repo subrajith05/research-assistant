@@ -14,7 +14,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://documind-05.vercel.app/",
+        "https://documind-05.vercel.app",
         "http://localhost:5173",
     ],
     allow_credentials=False,
